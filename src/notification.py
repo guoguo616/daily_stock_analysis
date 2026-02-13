@@ -2832,47 +2832,50 @@ class NotificationService:
             title = f"📈 股票分析报告 - {date_str}"
 
         try:
+            is_success = True
             # 根据 sendkey 格式构造 URL
             sendkey = self._serverchan3_sendkey
-            if sendkey.startswith('sctp'):
-                match = re.match(r'sctp(\d+)t', sendkey)
-                if match:
-                    num = match.group(1)
-                    url = f"https://{num}.push.ft07.com/send/{sendkey}.send"
+            sendkey_list = sendkey.split(',')
+            for sendkey_item in sendkey_list:
+                if sendkey_item.startswith('sctp'):
+                    match = re.match(r'sctp(\d+)t', sendkey_item)
+                    if match:
+                        num = match.group(1)
+                        url = f"https://{num}.push.ft07.com/send/{sendkey_item}.send"
+                    else:
+                        logger.error(f"Invalid sendkey format for sctp: {sendkey_item}")
+                        return False
                 else:
-                    logger.error("Invalid sendkey format for sctp")
-                    return False
-            else:
-                url = f"https://sctapi.ftqq.com/{sendkey}.send"
+                    url = f"https://sctapi.ftqq.com/{sendkey_item}.send"
 
-            # 构建请求参数
-            params = {
-                'title': title,
-                'desp': content,
-                'options': {}
-            }
+                # 构建请求参数
+                params = {
+                    'title': title,
+                    'desp': content,
+                    'options': {}
+                }
 
-            # 发送请求
-            headers = {
-                'Content-Type': 'application/json;charset=utf-8'
-            }
-            response = requests.post(url, json=params, headers=headers, timeout=10)
+                # 发送请求
+                headers = {
+                    'Content-Type': 'application/json;charset=utf-8'
+                }
+                response = requests.post(url, json=params, headers=headers, timeout=10)
 
-            if response.status_code == 200:
-                result = response.json()
-                logger.info(f"Server酱3 消息发送成功: {result}")
-                return True
-            else:
-                logger.error(f"Server酱3 请求失败: HTTP {response.status_code}")
-                logger.error(f"响应内容: {response.text}")
-                return False
+                if response.status_code == 200:
+                    result = response.json()
+                    logger.info(f"Server酱3 消息发送成功: {result}")
+                else:
+                    logger.error(f"Server酱3 请求失败: HTTP {response.status_code}")
+                    logger.error(f"响应内容: {response.text}")
+                    is_success = False
 
         except Exception as e:
             logger.error(f"发送 Server酱3 消息失败: {e}")
             import traceback
             logger.debug(traceback.format_exc())
             return False
-
+            
+        return is_success
 
    
     def send_to_discord(self, content: str) -> bool:
